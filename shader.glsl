@@ -37,20 +37,17 @@ float noise(vec2 p) {
 
 // take xz and return height of terrain based on noise
 float terrain(vec2 p) {
-    // low frequency, large scale, mountains
-    float h = noise(p * 0.4) * 2.2;
-    // medium frequency, medum details, ridges and bumps
-    h += noise(p * 1.1) * 0.9;
-    // high frequency, small details, roughness
-    h += noise(p * 2.8) * 0.3;
-    // shift down
-    return h - 1.2;
+    float h = noise(p * 0.3) * 4.0;
+    h += noise(p * 0.9) * 1.4;
+    h += noise(p * 2.5) * 0.4;
+    h += noise(p * 6.0) * 0.1;
+    return h - 2.2;
 }
 
 // trinangle density
 const float T = 14.0;
 
-const float ALTITUDE = 2.2;
+const float ALTITUDE = 3.2;
 
 const float FOV = 1.3;
 
@@ -134,6 +131,12 @@ void mainImage(
     vec3 col = vec3(0.0);                            
     col = mix(col, vec3(0.10, 0.01, 0.18), exp(-max(rd.y,0.0)*7.0) * 0.6); // exp() makes it exponential so full glow when at the horizon
 
+
+    // sun
+    vec3 sunDir = normalize(vec3(0.6, -0.1, 1.0));
+    float sun = pow(max(dot(rd, sunDir), 0.0), 24.0);
+    col += vec3(0.4, 0.0, 0.6) * sun;
+    
     // finds where the ray hits the terrain
     // t = distance traveled so far
     // p = ro + rd*t = current sampple point along the ray
@@ -176,7 +179,10 @@ void mainImage(
         // 55% based on the random id for some variation between triangles, and 45% based on the lighting so we can see the shape of the terrain
         vec3 lightPurple = vec3(0.62, 0.22, 0.95);
         vec3 darkPurple  = vec3(0.09, 0.01, 0.16);
-        col = mix(darkPurple, lightPurple, id * 0.55 + diff * 0.45);
+        float height = clamp(p.y * 0.4, 0.0, 0.70);
+        vec3 peakColor = vec3(0.85, 0.3, 1.0); // near-white light purple for peaks
+        col = mix(darkPurple, lightPurple, id * 0.3 + diff * 0.3);
+        col = mix(col, peakColor, height * height); // peaks blow out toward bright
 
         // wireframe edges in XZ grid
         // since this is flat xz, we don't get curved terrains but we get nice sharp triangles
@@ -189,10 +195,11 @@ void mainImage(
         col = mix(vec3(0.0), col, smoothstep(0.0, 0.05, e)); // 0 right on the edge, and rises to 1.0 at 0.05 distance from the edge. 
                                                                                            // 0.05 is the thickness of the edge 
 
-        // exponential fog
+        // fog
         // t=0 full color
-        // as t increases, exp(-t*0.05) decreases, so we mix more and more with the fog color
-        col = mix(vec3(0.04, 0.0, 0.07), col, exp(-t*0.05));
+        float distFog   = exp(-t * 0.045);
+    float heightFog = exp(-max(p.y + 1.0, 0.0) * 0.8);
+    col = mix(vec3(0.04, 0.0, 0.08), col, distFog * (1.0 - heightFog * 0.6));
     }
 
     // vignette
@@ -200,6 +207,7 @@ void mainImage(
     col *= 1.0 - dot(uv,uv)*0.5;
     fragColor = vec4(col, 1.0);
 }
+
 
 void main() {
     vec2 fc = (gl_FragCoord.xy);
