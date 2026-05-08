@@ -1,3 +1,8 @@
+#version 330 core
+uniform float iTime;
+uniform vec2  iResolution;
+out vec4 fragColor;
+
 // takes a 2d point and returns a random value 0-1 based on it
 float hash(vec2 p) {
     // remove decimal
@@ -194,4 +199,9 @@ void mainImage(
     // dot(uv,uv) is the distance from the center of the screen, so it is 0 at the center and increases towards the edges
     col *= 1.0 - dot(uv,uv)*0.5;
     fragColor = vec4(col, 1.0);
+}
+
+void main() {
+    vec2 fc = (gl_FragCoord.xy);
+    mainImage(fragColor, fc);
 }
